@@ -11,13 +11,21 @@ import Stack from './Stack'
 const ISO_DIR = new THREE.Vector3(1, 1, 1).normalize()
 const CAM_DISTANCE = 20
 
-/** Keeps the orthographic zoom fitted so the stack fills ~50% of the height. */
+/**
+ * Fits the orthographic zoom so the stack fills ~50% of the height — but only
+ * as a one-shot animation when the shape, tier count, viewport, or reset
+ * changes. Once it settles it stops touching the zoom, so OrbitControls scroll
+ * zoom sticks and you can zoom right up to the model.
+ */
 function AutoFit() {
   const camera = useThree((s) => s.camera) as THREE.OrthographicCamera
   const size = useThree((s) => s.size)
   const effector = useStore((s) => s.effector)
   const shape = useStore((s) => s.shape)
-  const targetZoom = useRef(50)
+  const resetToken = useStore((s) => s.resetToken)
+
+  // Non-null while a fit animation is in progress; null when idle (user owns zoom).
+  const targetZoom = useRef<number | null>(null)
 
   useEffect(() => {
     const built = buildShape(shape, effector)
@@ -27,14 +35,19 @@ function AutoFit() {
     const radius = 0.5 * Math.sqrt(w * w + w * w + height * height)
     // Fill ~50% of the viewport height -> sphere radius ~= 25% of height (px).
     targetZoom.current = (0.25 * size.height) / radius
-  }, [shape, effector, size.height])
+  }, [shape, effector, size.height, resetToken])
 
   useFrame(() => {
-    const z = camera.zoom
-    const next = THREE.MathUtils.lerp(z, targetZoom.current, 0.15)
-    if (Math.abs(next - z) > 0.01) {
-      camera.zoom = next
+    const target = targetZoom.current
+    if (target == null) return
+    const next = THREE.MathUtils.lerp(camera.zoom, target, 0.15)
+    camera.zoom = next
+    camera.updateProjectionMatrix()
+    // Close enough: snap and hand zoom control back to the user.
+    if (Math.abs(target - next) < 0.01) {
+      camera.zoom = target
       camera.updateProjectionMatrix()
+      targetZoom.current = null
     }
   })
 
@@ -69,6 +82,9 @@ function CameraRig() {
       enablePan={false}
       enableDamping
       dampingFactor={0.1}
+      zoomSpeed={1.2}
+      minZoom={1}
+      maxZoom={2000}
       makeDefault
     />
   )
