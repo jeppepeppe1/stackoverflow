@@ -1,0 +1,20 @@
+"$schema" = "https://conductor.build/schemas/settings.repo.schema.json"
+
+[scripts]
+# Runs once when a new workspace is created. node_modules is gitignored, so a
+# fresh workspace installs dependencies here.
+setup = "npm install"
+# Each workspace gets its own Vite port, so multiple can run at once.
+run_mode = "concurrent"
+
+[scripts.run.dev]
+# Vite dev server. Uses the Conductor-allocated port locally, falls back to
+# 5173 in cloud workspaces (where CONDUCTOR_PORT is unset).
+command = "npm run dev -- --host --port ${CONDUCTOR_PORT:-5173}"
+default = true
+icon = "play"
+
+[scripts.run.build]
+# Type-check + production build, then preview the built output.
+command = "npm run build && npm run preview -- --port ${CONDUCTOR_PORT:-4173}"
+icon = "hammer"
