@@ -5,6 +5,8 @@ import {
   MAX_EFFECTOR,
   MIN_SPEED,
   MAX_SPEED,
+  RECORD_DURATIONS,
+  MP4_SUPPORTED,
 } from '../store'
 import { PALETTES } from '../palettes'
 
@@ -32,12 +34,30 @@ export default function ControlPanel() {
   const pause = useStore((s) => s.pause)
   const reset = useStore((s) => s.reset)
   const requestExport = useStore((s) => s.requestExport)
+  const recordDuration = useStore((s) => s.recordDuration)
+  const setRecordDuration = useStore((s) => s.setRecordDuration)
+  const requestRecord = useStore((s) => s.requestRecord)
+  const recording = useStore((s) => s.recording)
+  const recordError = useStore((s) => s.recordError)
 
   // Local text buffers so invalid intermediate typing is allowed until blur.
   const [effText, setEffText] = useState(String(effector))
   const [spdText, setSpdText] = useState(speed.toFixed(1))
   useEffect(() => setEffText(String(effector)), [effector])
   useEffect(() => setSpdText(speed.toFixed(1)), [speed])
+
+  // Count down the remaining seconds while a recording is in progress.
+  const [remaining, setRemaining] = useState(0)
+  useEffect(() => {
+    if (!recording) return
+    setRemaining(recordDuration)
+    const start = performance.now()
+    const id = setInterval(() => {
+      const left = recordDuration - (performance.now() - start) / 1000
+      setRemaining(Math.max(0, left))
+    }, 100)
+    return () => clearInterval(id)
+  }, [recording, recordDuration])
 
   const commitEffector = () => {
     const n = parseInt(effText, 10)
@@ -183,6 +203,69 @@ export default function ControlPanel() {
           </svg>
           Export PNG
         </button>
+
+        {MP4_SUPPORTED && (
+          <>
+            <label className="field-label" htmlFor="mp4-duration">
+              MP4 length
+            </label>
+            <div className="duration-row" role="group" aria-label="MP4 length">
+              {RECORD_DURATIONS.map((d) => (
+                <button
+                  key={d}
+                  className={`duration-btn${recordDuration === d ? ' selected' : ''}`}
+                  onClick={() => setRecordDuration(d)}
+                  aria-pressed={recordDuration === d}
+                  disabled={recording}
+                >
+                  {d}s
+                </button>
+              ))}
+            </div>
+
+            <button
+              className="export-btn"
+              onClick={requestRecord}
+              disabled={recording}
+              title={recording ? 'Recording…' : 'Export MP4'}
+            >
+              {recording ? (
+                <>
+                  <span className="rec-dot" aria-hidden="true" />
+                  Recording… {remaining.toFixed(1)}s
+                </>
+              ) : (
+                <>
+                  <svg viewBox="0 0 24 24" width="15" height="15" fill="none">
+                    <rect
+                      x="3"
+                      y="6"
+                      width="12"
+                      height="12"
+                      rx="2"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                    />
+                    <path
+                      d="M17 10l4-2v8l-4-2"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                  Export MP4
+                </>
+              )}
+            </button>
+
+            {recordError && (
+              <p className="record-error" role="alert">
+                MP4 export failed: {recordError}
+              </p>
+            )}
+          </>
+        )}
       </Section>
     </div>
   )

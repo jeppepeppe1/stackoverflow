@@ -296,9 +296,69 @@ body {
   transition: background 0.15s, border-color 0.15s;
 }
 
-.export-btn:hover {
+.export-btn:hover:not(:disabled) {
   background: var(--fill);
   border-color: var(--fill);
+}
+
+.export-btn:disabled {
+  cursor: default;
+  color: var(--muted);
+}
+
+/* MP4 length picker */
+.duration-row {
+  display: flex;
+  gap: 10px;
+}
+
+.duration-btn {
+  flex: 1;
+  padding: 9px 0;
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-ctrl);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.duration-btn:hover:not(:disabled) {
+  border-color: #595959;
+}
+
+.duration-btn.selected {
+  background: var(--fill);
+  border-color: var(--fill);
+}
+
+.duration-btn:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.record-error {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--orange);
+}
+
+/* Blinking record indicator */
+.rec-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--orange);
+  animation: rec-blink 1s steps(2, start) infinite;
+}
+
+@keyframes rec-blink {
+  50% {
+    opacity: 0.2;
+  }
 }
 
 /* ---------------- Shape bar ---------------- */
